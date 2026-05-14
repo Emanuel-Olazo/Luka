@@ -20,7 +20,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="ui.auth.RegisterActivity"/>
+        <activity android:name="com.luka.finanzas.ui.auth.RegisterActivity"/>
         <activity android:name=".ui.main.MainActivity"/>
 
     </application>
