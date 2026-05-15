@@ -13,6 +13,7 @@ class BudgetFragment : Fragment() {
     private var _binding: FragmentBudgetBinding? = null
     private val binding get() = _binding!!
     private val viewModel: BudgetViewModel by viewModels()
+    private lateinit var adapter: BudgetAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View {
@@ -23,20 +24,24 @@ class BudgetFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        adapter = BudgetAdapter(emptyList())
         binding.rvBudgets.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvBudgets.adapter = adapter
 
         binding.btnSaveBudget.setOnClickListener {
             val category = binding.etBudgetCategory.text.toString().trim()
             val limitStr = binding.etBudgetLimit.text.toString()
 
             if (category.isEmpty() || limitStr.isEmpty()) {
-                Toast.makeText(requireContext(), "Completa todos los campos", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Completa todos los campos",
+                    Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val limit = limitStr.toDoubleOrNull()
             if (limit == null || limit <= 0) {
-                Toast.makeText(requireContext(), "Límite inválido", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Límite inválido",
+                    Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -46,13 +51,16 @@ class BudgetFragment : Fragment() {
         }
 
         viewModel.budgetItems.observe(viewLifecycleOwner) { items ->
-            // Adapter se conectará aquí
+            adapter.updateData(items)
         }
 
         viewModel.error.observe(viewLifecycleOwner) {
             Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
         }
+    }
 
+    override fun onResume() {
+        super.onResume()
         viewModel.loadBudgets()
     }
 
