@@ -1,8 +1,10 @@
 package com.luka.finanzas.ui.budget
 
+import android.animation.ObjectAnimator
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import androidx.recyclerview.widget.RecyclerView
 import com.luka.finanzas.databinding.ItemBudgetBinding
 
@@ -30,7 +32,12 @@ class BudgetAdapter(
                 ((item.spent / item.limit) * 100).toInt().coerceAtMost(100)
             else 0
 
-            progressBudget.progress = percent
+            // Animate progress bar
+            ObjectAnimator.ofInt(progressBudget, "progress", 0, percent).apply {
+                duration = 800
+                interpolator = DecelerateInterpolator()
+                start()
+            }
 
             when {
                 percent >= 100 -> {

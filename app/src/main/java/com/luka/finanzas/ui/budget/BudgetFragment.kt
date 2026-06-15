@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.chip.Chip
 import com.luka.finanzas.databinding.FragmentBudgetBinding
 
 class BudgetFragment : Fragment() {
@@ -28,6 +29,14 @@ class BudgetFragment : Fragment() {
         binding.rvBudgets.layoutManager = LinearLayoutManager(requireContext())
         binding.rvBudgets.adapter = adapter
 
+        // Setup Chips
+        binding.chipGroupCategories.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val chip = group.findViewById<Chip>(checkedIds.first())
+                binding.etBudgetCategory.setText(chip.text)
+            }
+        }
+
         binding.btnSaveBudget.setOnClickListener {
             val category = binding.etBudgetCategory.text.toString().trim()
             val limitStr = binding.etBudgetLimit.text.toString()
@@ -46,8 +55,31 @@ class BudgetFragment : Fragment() {
             }
 
             viewModel.saveBudget(category, limit)
+            
+            // Add as new chip if it doesn't exist
+            var exists = false
+            for (i in 0 until binding.chipGroupCategories.childCount) {
+                val chip = binding.chipGroupCategories.getChildAt(i) as Chip
+                if (chip.text.toString().equals(category, ignoreCase = true)) {
+                    exists = true
+                    break
+                }
+            }
+            if (!exists) {
+                val newChip = Chip(requireContext()).apply {
+                    text = category
+                    isCheckable = true
+                    isCloseIconVisible = true
+                    setOnCloseIconClickListener {
+                        binding.chipGroupCategories.removeView(this)
+                    }
+                }
+                binding.chipGroupCategories.addView(newChip)
+            }
+            
             binding.etBudgetCategory.text?.clear()
             binding.etBudgetLimit.text?.clear()
+            binding.chipGroupCategories.clearCheck()
         }
 
         viewModel.budgetItems.observe(viewLifecycleOwner) { items ->

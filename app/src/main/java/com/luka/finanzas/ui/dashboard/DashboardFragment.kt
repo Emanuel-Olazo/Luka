@@ -9,9 +9,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
 import com.luka.finanzas.R
 import com.luka.finanzas.databinding.FragmentDashboardBinding
 import com.luka.finanzas.ui.transactions.TransactionAdapter
@@ -33,9 +30,7 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.fabAdd.setOnClickListener {
-            findNavController().navigate(R.id.addTransactionFragment)
-        }
+        super.onViewCreated(view, savedInstanceState)
 
         recentAdapter = TransactionAdapter(emptyList())
         binding.rvRecentTransactions.layoutManager = LinearLayoutManager(requireContext())
@@ -51,16 +46,16 @@ class DashboardFragment : Fragment() {
 
     private fun setupObservers() {
         viewModel.totalIncome.observe(viewLifecycleOwner) {
-            binding.tvTotalIncome.text = "S/. %.2f".format(it)
+            val formatted = "S/. %.2f".format(it)
+            binding.tvTotalIncome.text = formatted
+            binding.tvTotalIncomeCard.text = formatted
         }
         viewModel.totalExpense.observe(viewLifecycleOwner) {
             binding.tvTotalExpense.text = "S/. %.2f".format(it)
+            binding.tvTotalPayments.text = "S/. 0.00" // Placeholder for now
         }
         viewModel.balance.observe(viewLifecycleOwner) {
             binding.tvBalance.text = "S/. %.2f".format(it)
-        }
-        viewModel.categoryExpenses.observe(viewLifecycleOwner) { map ->
-            setupPieChart(map)
         }
         viewModel.recentTransactions.observe(viewLifecycleOwner) { list ->
             recentAdapter.updateData(list)
@@ -72,31 +67,7 @@ class DashboardFragment : Fragment() {
         viewModel.loadDashboard(cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR))
     }
 
-    private fun setupPieChart(data: Map<String, Double>) {
-        if (data.isEmpty()) return
-        val entries = data.map { PieEntry(it.value.toFloat(), it.key) }
-        val colors = listOf(
-            Color.parseColor("#FF5722"), Color.parseColor("#2196F3"),
-            Color.parseColor("#9C27B0"), Color.parseColor("#4CAF50"),
-            Color.parseColor("#FF9800"), Color.parseColor("#00BCD4"),
-            Color.parseColor("#795548"), Color.parseColor("#607D8B")
-        )
-        val dataSet = PieDataSet(entries, "").apply {
-            this.colors = colors
-            valueTextSize = 12f
-            valueTextColor = Color.WHITE
-        }
-        binding.pieChart.apply {
-            this.data = PieData(dataSet)
-            description.isEnabled = false
-            isDrawHoleEnabled = true
-            holeRadius = 40f
-            setHoleColor(Color.WHITE)
-            legend.isEnabled = true
-            animateY(800)
-            invalidate()
-        }
-    }
+    // PieChart removed from Dashboard
 
     override fun onDestroyView() {
         super.onDestroyView()
