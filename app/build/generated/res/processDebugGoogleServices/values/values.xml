@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_web_client_id" translatable="false">876833650784-r2ei3vcpp3hon7t7u01pa0qkp8a9inga.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">876833650784</string>
+    <string name="google_api_key" translatable="false">AIzaSyDNu17DHgPyAJ5BxtEt_gPxsiLzrAWWoTM</string>
+    <string name="google_app_id" translatable="false">1:876833650784:android:5fe8fc8420b5d2af166b05</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyDNu17DHgPyAJ5BxtEt_gPxsiLzrAWWoTM</string>
+    <string name="google_storage_bucket" translatable="false">luka-finanzas-3d8b9.firebasestorage.app</string>
+    <string name="project_id" translatable="false">luka-finanzas-3d8b9</string>
+</resources>

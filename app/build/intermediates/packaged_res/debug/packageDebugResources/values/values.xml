@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="colorAccent">#7C3AED</color>
+    <color name="colorBackground">#F9FAFB</color>
+    <color name="colorExpense">#EF4444</color>
+    <color name="colorIncome">#10B981</color>
+    <color name="colorPrimary">#4338CA</color>
+    <color name="colorPrimaryVariant">#312E81</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorTextOnPrimary">#FFFFFF</color>
+    <color name="colorTextPrimary">#111827</color>
+    <color name="colorTextSecondary">#6B7280</color>
+    <color name="white">#FFFFFF</color>
+    <string name="default_web_client_id" translatable="false">876833650784-r2ei3vcpp3hon7t7u01pa0qkp8a9inga.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">876833650784</string>
+    <string name="google_api_key" translatable="false">AIzaSyDNu17DHgPyAJ5BxtEt_gPxsiLzrAWWoTM</string>
+    <string name="google_app_id" translatable="false">1:876833650784:android:5fe8fc8420b5d2af166b05</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyDNu17DHgPyAJ5BxtEt_gPxsiLzrAWWoTM</string>
+    <string name="google_storage_bucket" translatable="false">luka-finanzas-3d8b9.firebasestorage.app</string>
+    <string name="project_id" translatable="false">luka-finanzas-3d8b9</string>
+</resources>
