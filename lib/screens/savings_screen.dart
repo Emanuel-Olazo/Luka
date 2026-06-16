@@ -6,7 +6,11 @@ class SavingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text('Ahorros y Alcancías Compartidas', style: TextStyle(fontSize: 24, textAlign: TextAlign.center)),
+      child: Text(
+        'Ahorros y Alcancías Compartidas',
+        style: TextStyle(fontSize: 24),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }
