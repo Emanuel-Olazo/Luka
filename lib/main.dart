@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
+import 'screens/main_screen.dart';
 
 void main() {
-  runApp(
-    MaterialApp(
+  runApp(const LukaApp());
+}
+
+class LukaApp extends StatelessWidget {
+  const LukaApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
       title: 'Luka App',
       theme: ThemeData(
-        primarySwatch: Colors.teal,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        useMaterial3: true,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Luka - Starter App'),
-          backgroundColor: Colors.teal,
-        ),
-        body: const Center(
-          child: Text(
-            '¡Hola Luka!',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    )
-  );
+      home: const MainScreen(),
+    );
+  }
 }
