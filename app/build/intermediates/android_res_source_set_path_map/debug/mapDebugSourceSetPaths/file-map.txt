@@ -1,8 +1,0 @@
-com.luka.finanzas.app-pngs-0 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\build\generated\res\pngs\debug
-com.luka.finanzas.app-res-1 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\build\generated\res\processDebugGoogleServices
-com.luka.finanzas.app-updated_navigation_xml-2 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\build\generated\updated_navigation_xml\debug
-com.luka.finanzas.app-packageDebugResources-3 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.luka.finanzas.app-packageDebugResources-4 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.luka.finanzas.app-debug-5 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.luka.finanzas.app-debug-6 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\src\debug\res
-com.luka.finanzas.app-main-7 C:\Users\Emanuel\AndroidStudioProjects\Luka\app\src\main\res

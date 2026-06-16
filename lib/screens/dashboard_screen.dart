@@ -1,80 +1,117 @@
 import 'package:flutter/material.dart';
+import '../models/transaction.dart' as app_models;
+import '../services/firestore_service.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Saldo Total Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24.0),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Theme.of(context).primaryColor, Colors.teal.shade300],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Saldo Total',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '\$3,450.50',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Botones de Acción Rápida
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      body: StreamBuilder<List<app_models.Transaction>>(
+        stream: _firestoreService.getTransactions(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final transactions = snapshot.data ?? [];
+          
+          double totalBalance = 0;
+          for (var tx in transactions) {
+            if (tx.isExpense) {
+              totalBalance -= tx.amount;
+            } else {
+              totalBalance += tx.amount;
+            }
+          }
+
+          final recentTx = transactions.take(3).toList();
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildActionButton(context, Icons.arrow_downward, 'Ingresar', Colors.green),
-                _buildActionButton(context, Icons.arrow_upward, 'Retirar', Colors.red),
-                _buildActionButton(context, Icons.sync, 'Transferir', Colors.blue),
+                // Saldo Total Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24.0),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Theme.of(context).primaryColor, Colors.teal.shade300],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        spreadRadius: 2,
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Saldo Total',
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '\$${totalBalance.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Botones de Acción Rápida
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildActionButton(context, Icons.arrow_downward, 'Ingresar', Colors.green),
+                    _buildActionButton(context, Icons.arrow_upward, 'Retirar', Colors.red),
+                    _buildActionButton(context, Icons.sync, 'Transferir', Colors.blue),
+                  ],
+                ),
+                
+                const SizedBox(height: 32),
+                const Text(
+                  'Transacciones Recientes',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                
+                if (recentTx.isEmpty)
+                  const Text('No hay transacciones recientes.')
+                else
+                  ...recentTx.map((tx) => _buildRecentTransactionTile(
+                        context,
+                        tx.note.isNotEmpty ? tx.note : tx.category,
+                        '${tx.date.day}/${tx.date.month}/${tx.date.year}',
+                        tx.amount,
+                        tx.isExpense,
+                      )),
               ],
             ),
-            
-            const SizedBox(height: 32),
-            const Text(
-              'Transacciones Recientes',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            
-            // Mini lista de transacciones
-            _buildRecentTransactionTile(context, 'Supermercado', 'Hoy', 150.50, true),
-            _buildRecentTransactionTile(context, 'Salario', 'Ayer', 2500.00, false),
-            _buildRecentTransactionTile(context, 'Netflix', 'Hace 3 días', 15.99, true),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -126,4 +163,3 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 }
-
