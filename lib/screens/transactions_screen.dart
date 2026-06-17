@@ -145,6 +145,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Historial', style: TextStyle(color: Color(0xFF1D2335), fontSize: 24, fontWeight: FontWeight.bold)),
+            Text('MOVIMIENTOS EN ESTE MES', style: TextStyle(color: Colors.grey.shade500, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+          ],
+        ),
+      ),
       body: StreamBuilder<List<app_models.Transaction>>(
         stream: _firestoreService.getTransactions(),
         builder: (context, snapshot) {
@@ -162,81 +174,106 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(16.0),
             itemCount: transactions.length,
             itemBuilder: (context, index) {
               final tx = transactions[index];
               final isExpense = tx.isExpense;
+              final title = tx.category;
+              final subtitle = tx.note.isNotEmpty ? '${tx.note} · ${tx.date.day}/${tx.date.month}/${tx.date.year}' : '${tx.date.day}/${tx.date.month}/${tx.date.year}';
               
-              return Dismissible(
-                key: Key(tx.id),
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: const Icon(Icons.delete, color: Colors.white),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                direction: DismissDirection.endToStart,
-                onDismissed: (direction) {
-                  _firestoreService.deleteTransaction(tx.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Transacción eliminada')),
-                  );
-                },
-                child: GestureDetector(
-                  onTap: () => _showTransactionForm(context, tx),
-                  child: Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isExpense ? Colors.red.shade100 : Colors.green.shade100,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isExpense ? Colors.red.shade50 : Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Icon(
-                          isExpense ? Icons.shopping_bag : Icons.attach_money,
-                          color: isExpense ? Colors.red : Colors.green,
+                          isExpense ? Icons.arrow_downward : Icons.arrow_upward,
+                          color: isExpense ? Colors.red.shade300 : Colors.blue.shade300,
+                          size: 20,
                         ),
                       ),
-                      title: Text(tx.note.isNotEmpty ? tx.note : tx.category, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('${tx.date.day}/${tx.date.month}/${tx.date.year} - ${tx.category}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(subtitle, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '${isExpense ? '-' : '+'}S/ ${tx.amount.toStringAsFixed(2)}',
+                            '${isExpense ? '-' : '+'}S/. ${tx.amount.toStringAsFixed(2)}',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: isExpense ? Colors.red : Colors.green,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              color: isExpense ? Colors.black87 : Colors.green.shade600,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
-                            onPressed: () => _showTransactionForm(context, tx),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, size: 20, color: Colors.redAccent),
-                            onPressed: () {
-                              _firestoreService.deleteTransaction(tx.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Transacción eliminada')),
-                              );
-                            },
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _showTransactionForm(context, tx),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(Icons.edit_outlined, size: 16, color: Colors.blue.shade300),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  _firestoreService.deleteTransaction(tx.id);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Transacción eliminada')),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(Icons.delete_outline, size: 16, color: Colors.red.shade300),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ),
+                    ],
                   ),
                 ),
               );
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showTransactionForm(context),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
       ),
     );
   }

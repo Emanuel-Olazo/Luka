@@ -17,6 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       body: StreamBuilder<List<app_models.Transaction>>(
         stream: _firestoreService.getTransactions(),
         builder: (context, snapshot) {
@@ -27,93 +28,214 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final transactions = snapshot.data ?? [];
           
           double totalBalance = 0;
+          double totalIngresos = 0;
+          double totalGastos = 0;
+          
           for (var tx in transactions) {
             if (tx.isExpense) {
               totalBalance -= tx.amount;
+              totalGastos += tx.amount;
             } else {
               totalBalance += tx.amount;
+              totalIngresos += tx.amount;
             }
           }
 
-          final recentTx = transactions.take(3).toList();
+          final recentTx = transactions.take(5).toList();
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Saldo Total Card
+                // Header (Dark Blue)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(24.0),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Theme.of(context).primaryColor, Colors.teal.shade300],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
-                        spreadRadius: 2,
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                  padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 24),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1D2335),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'HOLA, OLAZO',
+                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                          ),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Text('S/. ', style: TextStyle(color: Colors.white)),
+                                    Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 16),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade400.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.exit_to_app, color: Colors.redAccent, size: 20),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Row(
+                        children: [
+                          Text('2026', style: TextStyle(color: Colors.white70)),
+                          Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 16),
+                          SizedBox(width: 12),
+                          Text('May', style: TextStyle(color: Colors.white70)),
+                          Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 16),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
                       const Text(
-                        'Saldo Total',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                        'SALDO DISPONIBLE',
+                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'S/ ${totalBalance.toStringAsFixed(2)}',
+                        'S/. ${totalBalance.toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 42,
+                          fontWeight: FontWeight.w800,
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8, height: 8,
+                            decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Ingresos: S/. ${totalIngresos.toStringAsFixed(2)}',
+                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
                 
-                // Botones de Acción Rápida
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildActionButton(context, Icons.arrow_downward, 'Ingresar', Colors.green),
-                    _buildActionButton(context, Icons.arrow_upward, 'Gasto', Colors.red),
-                    _buildActionButton(context, Icons.sync, 'Transferir', Colors.blue),
-                  ],
+                // Resumen del Período
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'RESUMEN DEL PERÍODO',
+                        style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(child: _buildSummaryCard('GASTOS', 'S/. ${totalGastos.toStringAsFixed(2)}', Colors.red, Icons.arrow_downward)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildSummaryCard('PAGOS', 'S/. 0.00', Colors.blue, Icons.receipt_long)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildSummaryCard('INGRESOS', 'S/. ${totalIngresos.toStringAsFixed(2)}', Colors.green, Icons.arrow_upward)),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Movimientos Recientes',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Ver todos >',
+                            style: TextStyle(fontSize: 14, color: Colors.blue.shade700, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (recentTx.isEmpty)
+                        const Center(child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Text('No hay movimientos recientes.', style: TextStyle(color: Colors.grey)),
+                        ))
+                      else
+                        ...recentTx.map((tx) => _buildRecentTransactionTile(
+                              context,
+                              tx.category,
+                              tx.note.isNotEmpty ? tx.note : tx.category,
+                              tx.amount,
+                              tx.isExpense,
+                            )),
+                    ],
+                  ),
                 ),
-                
-                const SizedBox(height: 32),
-                const Text(
-                  'Transacciones Recientes',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                
-                if (recentTx.isEmpty)
-                  const Text('No hay transacciones recientes.')
-                else
-                  ...recentTx.map((tx) => _buildRecentTransactionTile(
-                        context,
-                        tx.note.isNotEmpty ? tx.note : tx.category,
-                        '${tx.date.day}/${tx.date.month}/${tx.date.year}',
-                        tx.amount,
-                        tx.isExpense,
-                      )),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(String title, String amount, MaterialColor color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: TextStyle(color: Colors.grey.shade500, fontSize: 10, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color.shade300, size: 14),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            amount,
+            style: TextStyle(
+              color: color.shade400,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -385,26 +507,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRecentTransactionTile(BuildContext context, String title, String date, double amount, bool isExpense) {
-    return Card(
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 8),
+  Widget _buildRecentTransactionTile(BuildContext context, String title, String subtitle, double amount, bool isExpense) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: isExpense ? Colors.red.shade100 : Colors.green.shade100,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isExpense ? Colors.red.shade50 : Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Icon(
-            isExpense ? Icons.shopping_bag : Icons.attach_money,
-            color: isExpense ? Colors.red : Colors.green,
+            isExpense ? Icons.arrow_downward : Icons.arrow_upward,
+            color: isExpense ? Colors.red.shade300 : Colors.blue.shade300,
             size: 20,
           ),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(date),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
         trailing: Text(
-          '${isExpense ? '-' : '+'}S/ ${amount.toStringAsFixed(2)}',
+          '${isExpense ? '-' : '+'}S/. ${amount.toStringAsFixed(2)}',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isExpense ? Colors.red : Colors.green,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+            color: isExpense ? Colors.black87 : Colors.green.shade600,
           ),
         ),
       ),

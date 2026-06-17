@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../models/budget.dart';
 import '../models/transaction.dart' as app_models;
 import '../models/category.dart';
@@ -13,238 +14,398 @@ class BudgetScreen extends StatefulWidget {
 
 class _BudgetScreenState extends State<BudgetScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-
-  String _getMonthName(int month) {
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    return month >= 1 && month <= 12 ? months[month - 1] : '';
-  }
-
-  void _showBudgetForm(BuildContext context, [Budget? existingBudget]) {
-    final limitController = TextEditingController(text: existingBudget?.limitAmount.toString() ?? '');
-    String? selectedCategory = existingBudget?.category;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) {
-        return StreamBuilder<List<Category>>(
-          stream: _firestoreService.getCategories(),
-          builder: (context, snapshot) {
-            final categories = snapshot.data?.map((c) => c.name).toList() ?? [];
-            if (categories.isNotEmpty && selectedCategory == null) {
-              selectedCategory = categories.first;
-            } else if (categories.isNotEmpty && !categories.contains(selectedCategory)) {
-              categories.add(selectedCategory!);
-            }
-
-            return StatefulBuilder(
-              builder: (BuildContext context, StateSetter setModalState) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(ctx).viewInsets.bottom,
-                    left: 20,
-                    right: 20,
-                    top: 20,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        existingBudget == null ? 'Nuevo Presupuesto' : 'Editar Presupuesto', 
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: limitController,
-                        decoration: const InputDecoration(labelText: 'Límite Mensual', prefixText: 'S/ '),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                      const SizedBox(height: 10),
-                      if (categories.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text('Cargando categorías...', style: TextStyle(color: Colors.grey)),
-                        )
-                      else
-                        DropdownButtonFormField<String>(
-                          value: selectedCategory,
-                          items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                          onChanged: (val) => setModalState(() => selectedCategory = val),
-                          decoration: const InputDecoration(labelText: 'Categoría'),
-                        ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () async {
-                          if (limitController.text.isEmpty || selectedCategory == null) return;
-                          final double limit = double.tryParse(limitController.text) ?? 0.0;
-                          if (limit <= 0) return;
-                          
-                          final budget = Budget(
-                            id: existingBudget?.id ?? '', 
-                            category: selectedCategory!,
-                            limitAmount: limit,
-                            month: DateTime.now().month,
-                            year: DateTime.now().year,
-                            uid: _firestoreService.uid ?? '',
-                          );
-
-                          if (existingBudget == null) {
-                            await _firestoreService.addBudget(budget);
-                          } else {
-                            await _firestoreService.updateBudget(budget.id, budget.toMap());
-                          }
-                          
-                          if (ctx.mounted) Navigator.pop(ctx);
-                        },
-                        child: const Text('Guardar'),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                );
-              }
-            );
-          }
-        );
-      },
-    );
-  }
+  bool _isBudgetVsReal = true;
+  final TextEditingController _limitController = TextEditingController();
+  String? _selectedCategory;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: StreamBuilder<List<Budget>>(
-        stream: _firestoreService.getBudgets(),
-        builder: (context, budgetSnapshot) {
-          if (budgetSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (budgetSnapshot.hasError) {
-            return Center(child: Text('Error: ${budgetSnapshot.error}'));
-          }
-
-          final budgets = budgetSnapshot.data ?? [];
-
-          if (budgets.isEmpty) {
-            return const Center(child: Text('No hay presupuestos configurados.'));
-          }
-
-          return StreamBuilder<List<app_models.Transaction>>(
-            stream: _firestoreService.getTransactions(),
-            builder: (context, txSnapshot) {
-              if (txSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              
-              final transactions = txSnapshot.data ?? [];
-
-              // Calculate spent amount for each budget
-              for (var budget in budgets) {
-                double spent = 0;
-                for (var tx in transactions) {
-                  if (tx.isExpense && tx.category == budget.category && tx.date.month == budget.month && tx.date.year == budget.year) {
-                    spent += tx.amount;
-                  }
-                }
-                budget.spentAmount = spent;
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.all(12.0),
-                itemCount: budgets.length,
-                itemBuilder: (context, index) {
-                  final budget = budgets[index];
-                  // Calcular el color de la barra dependiendo del progreso
-                  Color progressColor = Colors.green;
-                  if (budget.progress > 0.9) {
-                    progressColor = Colors.red;
-                  } else if (budget.progress > 0.7) {
-                    progressColor = Colors.orange;
-                  }
-
-                  return Dismissible(
-                    key: Key(budget.id),
-                    background: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: const Icon(Icons.delete, color: Colors.white),
-                    ),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (direction) {
-                      _firestoreService.deleteBudget(budget.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Presupuesto eliminado')),
-                      );
-                    },
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Analítica', style: TextStyle(color: Color(0xFF1D2335), fontSize: 24, fontWeight: FontWeight.bold)),
+            Text('GRÁFICOS Y PRESUPUESTOS', style: TextStyle(color: Colors.grey.shade500, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          // Custom Tab Selector
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
                     child: GestureDetector(
-                      onTap: () => _showBudgetForm(context, budget),
-                      child: Card(
-                        elevation: 2,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '${budget.category} (${_getMonthName(budget.month)} ${budget.year})',
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(
-                                    'S/ ${budget.spentAmount.toStringAsFixed(0)} / S/ ${budget.limitAmount.toStringAsFixed(0)}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: budget.progress > 1.0 ? Colors.red : Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              LinearProgressIndicator(
-                                value: budget.progress > 1.0 ? 1.0 : budget.progress,
-                                backgroundColor: Colors.grey.shade200,
-                                color: progressColor,
-                                minHeight: 10,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Quedan: S/ ${budget.remaining.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
+                      onTap: () => setState(() => _isBudgetVsReal = true),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _isBudgetVsReal ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: _isBudgetVsReal
+                              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                              : [],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Presupuesto vs Real',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: _isBudgetVsReal ? Colors.black87 : Colors.grey.shade600,
+                            fontSize: 13,
                           ),
                         ),
                       ),
                     ),
-                  );
-                },
-              );
-            }
-          );
-        },
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _isBudgetVsReal = false),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: !_isBudgetVsReal ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: !_isBudgetVsReal
+                              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                              : [],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Distribución',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: !_isBudgetVsReal ? Colors.black87 : Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<Budget>>(
+              stream: _firestoreService.getBudgets(),
+              builder: (context, budgetSnapshot) {
+                return StreamBuilder<List<app_models.Transaction>>(
+                  stream: _firestoreService.getTransactions(),
+                  builder: (context, txSnapshot) {
+                    final budgets = budgetSnapshot.data ?? [];
+                    final transactions = txSnapshot.data ?? [];
+
+                    // Calculate spent amount for each budget
+                    for (var budget in budgets) {
+                      double spent = 0;
+                      for (var tx in transactions) {
+                        if (tx.isExpense && tx.category == budget.category && tx.date.month == budget.month && tx.date.year == budget.year) {
+                          spent += tx.amount;
+                        }
+                      }
+                      budget.spentAmount = spent;
+                    }
+
+                    if (_isBudgetVsReal) {
+                      return _buildBudgetVsRealTab(budgets, transactions);
+                    } else {
+                      return _buildDistributionTab(transactions);
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showBudgetForm(context),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add_chart),
+    );
+  }
+
+  Widget _buildBudgetVsRealTab(List<Budget> budgets, List<app_models.Transaction> transactions) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Line Chart Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Presupuesto vs. Real', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text('EJECUCIÓN POR CATEGORÍA', style: TextStyle(color: Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 200,
+                  child: budgets.isEmpty ? const Center(child: Text('No hay presupuestos para mostrar')) : LineChart(
+                    LineChartData(
+                      gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade200, strokeWidth: 1, dashArray: [5, 5])),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            interval: 1,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() >= 0 && value.toInt() < budgets.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(budgets[value.toInt()].category, style: TextStyle(color: Colors.grey.shade600, fontSize: 10)),
+                                );
+                              }
+                              return const Text('');
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 200,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return Text(value.toInt().toString(), style: TextStyle(color: Colors.grey.shade500, fontSize: 10));
+                            },
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        // Meta (Black line)
+                        LineChartBarData(
+                          spots: budgets.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.limitAmount)).toList(),
+                          isCurved: true,
+                          color: Colors.black87,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: true),
+                        ),
+                        // Real (Blue line)
+                        LineChartBarData(
+                          spots: budgets.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.spentAmount)).toList(),
+                          isCurved: true,
+                          color: Colors.blue.shade600,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: true),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.black87, shape: BoxShape.circle)),
+                    const SizedBox(width: 4),
+                    const Text('Meta', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 16),
+                    Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.blue.shade600, shape: BoxShape.circle)),
+                    const SizedBox(width: 4),
+                    const Text('Real', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Fijar Presupuesto Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Fijar Presupuesto', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: budgets.map((b) => Chip(
+                    label: Text('${b.category} S/. ${b.limitAmount.toStringAsFixed(2)}', style: TextStyle(color: Colors.blue.shade700, fontSize: 12, fontWeight: FontWeight.bold)),
+                    backgroundColor: Colors.blue.shade50,
+                    deleteIcon: Icon(Icons.close, size: 14, color: Colors.blue.shade300),
+                    onDeleted: () {
+                      _firestoreService.deleteBudget(b.id);
+                    },
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide.none),
+                  )).toList(),
+                ),
+                const SizedBox(height: 24),
+                StreamBuilder<List<Category>>(
+                  stream: _firestoreService.getCategories(),
+                  builder: (context, snapshot) {
+                    final categories = snapshot.data?.map((c) => c.name).toList() ?? [];
+                    if (categories.isNotEmpty && _selectedCategory == null && !categories.contains(_selectedCategory)) {
+                      _selectedCategory = categories.first;
+                    }
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedCategory,
+                          isExpanded: true,
+                          hint: const Text('Categoría'),
+                          items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                          onChanged: (val) => setState(() => _selectedCategory = val),
+                        ),
+                      ),
+                    );
+                  }
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                        child: TextField(
+                          controller: _limitController,
+                          decoration: const InputDecoration(border: InputBorder.none, hintText: 'Límite en S/.'),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        if (_limitController.text.isEmpty || _selectedCategory == null) return;
+                        final double limit = double.tryParse(_limitController.text) ?? 0.0;
+                        if (limit <= 0) return;
+                        
+                        final budget = Budget(
+                          id: '', 
+                          category: _selectedCategory!,
+                          limitAmount: limit,
+                          month: DateTime.now().month,
+                          year: DateTime.now().year,
+                          uid: _firestoreService.uid ?? '',
+                        );
+
+                        await _firestoreService.addBudget(budget);
+                        _limitController.clear();
+                        setState(() {});
+                      },
+                      child: const Text('Fijar', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDistributionTab(List<app_models.Transaction> transactions) {
+    Map<String, double> expensesByCategory = {};
+    for (var tx in transactions) {
+      if (tx.isExpense) {
+        expensesByCategory[tx.category] = (expensesByCategory[tx.category] ?? 0) + tx.amount;
+      }
+    }
+
+    final colors = [
+      Colors.green.shade600,
+      Colors.amber.shade500,
+      Colors.blue.shade600,
+      Colors.red.shade500,
+      Colors.purple.shade500,
+      Colors.teal.shade500,
+    ];
+
+    List<PieChartSectionData> sections = [];
+    int colorIndex = 0;
+    expensesByCategory.forEach((category, amount) {
+      sections.add(
+        PieChartSectionData(
+          color: colors[colorIndex % colors.length], // Removed unnecessary !
+          value: amount,
+          title: '', // No titles on the chart itself to match design
+          radius: 40,
+        ),
+      );
+      colorIndex++;
+    });
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Distribución Global', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 4),
+            Text('ESTRUCTURA FINANCIERA DEL PERÍODO', style: TextStyle(color: Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            const SizedBox(height: 48),
+            SizedBox(
+              height: 200,
+              child: expensesByCategory.isEmpty ? const Center(child: Text('No hay gastos registrados')) : PieChart(
+                PieChartData(
+                  sectionsSpace: 4,
+                  centerSpaceRadius: 60,
+                  sections: sections,
+                ),
+              ),
+            ),
+            const SizedBox(height: 48),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.center,
+              children: expensesByCategory.keys.toList().asMap().entries.map((e) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 12, height: 12, decoration: BoxDecoration(color: colors[e.key % colors.length], shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                    Text(e.value, style: TextStyle(color: Colors.blue.shade700, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ],
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
