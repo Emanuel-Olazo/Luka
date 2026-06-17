@@ -34,4 +34,14 @@ class Budget {
       uid: data['uid'] ?? '',
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'category': category,
+      'limitAmount': limitAmount,
+      'month': month,
+      'year': year,
+      'uid': uid,
+    };
+  }
 }

@@ -43,4 +43,16 @@ class SavingsGoal {
       members: m,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'targetAmount': targetAmount,
+      'savedAmount': savedAmount,
+      'deadline': deadline != null ? Timestamp.fromDate(deadline!) : null,
+      'createdBy': createdBy,
+      'inviteCode': inviteCode,
+      'members': members,
+    };
+  }
 }

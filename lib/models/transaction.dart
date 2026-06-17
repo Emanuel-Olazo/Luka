@@ -31,4 +31,15 @@ class Transaction {
       uid: data['uid'] ?? '',
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'note': note,
+      'amount': amount,
+      'date': Timestamp.fromDate(date),
+      'category': category,
+      'type': isExpense ? 'expense' : 'income',
+      'uid': uid,
+    };
+  }
 }
