@@ -77,7 +77,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       ),
                       TextField(
                         controller: amountController,
-                        decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
+                        decoration: const InputDecoration(labelText: 'Monto', prefixText: 'S/ '),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       ),
                       const SizedBox(height: 10),
@@ -202,7 +202,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '${isExpense ? '-' : '+'}\$${tx.amount.toStringAsFixed(2)}',
+                            '${isExpense ? '-' : '+'}S/ ${tx.amount.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,

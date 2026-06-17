@@ -49,13 +49,13 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: targetController,
-                    decoration: const InputDecoration(labelText: 'Meta de Ahorro', prefixText: '\$ '),
+                    decoration: const InputDecoration(labelText: 'Meta de Ahorro', prefixText: 'S/ '),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: savedController,
-                    decoration: const InputDecoration(labelText: 'Ya ahorrado', prefixText: '\$ '),
+                    decoration: const InputDecoration(labelText: 'Ya ahorrado', prefixText: 'S/ '),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
                   const SizedBox(height: 10),
@@ -208,7 +208,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '\$${goal.savedAmount.toStringAsFixed(0)}',
+                                'S/ ${goal.savedAmount.toStringAsFixed(0)}',
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -216,7 +216,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                                 ),
                               ),
                               Text(
-                                'Meta: \$${goal.targetAmount.toStringAsFixed(0)}',
+                                'Meta: S/ ${goal.targetAmount.toStringAsFixed(0)}',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey,

@@ -59,7 +59,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: limitController,
-                        decoration: const InputDecoration(labelText: 'Límite Mensual', prefixText: '\$ '),
+                        decoration: const InputDecoration(labelText: 'Límite Mensual', prefixText: 'S/ '),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       ),
                       const SizedBox(height: 10),
@@ -203,7 +203,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                   ),
                                   Text(
-                                    '\$${budget.spentAmount.toStringAsFixed(0)} / \$${budget.limitAmount.toStringAsFixed(0)}',
+                                    'S/ ${budget.spentAmount.toStringAsFixed(0)} / S/ ${budget.limitAmount.toStringAsFixed(0)}',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -222,7 +222,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Quedan: \$${budget.remaining.toStringAsFixed(2)}',
+                                'Quedan: S/ ${budget.remaining.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 14,

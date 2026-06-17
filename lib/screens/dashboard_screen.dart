@@ -71,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '\$${totalBalance.toStringAsFixed(2)}',
+                        'S/ ${totalBalance.toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 36,
@@ -151,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: amountController,
-                        decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
+                        decoration: const InputDecoration(labelText: 'Monto', prefixText: 'S/ '),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       ),
                       const SizedBox(height: 10),
@@ -234,7 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: amountController,
-                        decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
+                        decoration: const InputDecoration(labelText: 'Monto', prefixText: 'S/ '),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       ),
                       const SizedBox(height: 10),
@@ -327,7 +327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(height: 10),
                         TextField(
                           controller: amountController,
-                          decoration: const InputDecoration(labelText: 'Monto a Transferir', prefixText: '\$ '),
+                          decoration: const InputDecoration(labelText: 'Monto a Transferir', prefixText: 'S/ '),
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         ),
                         const SizedBox(height: 24),
@@ -401,7 +401,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(date),
         trailing: Text(
-          '${isExpense ? '-' : '+'}\$${amount.toStringAsFixed(2)}',
+          '${isExpense ? '-' : '+'}S/ ${amount.toStringAsFixed(2)}',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: isExpense ? Colors.red : Colors.green,
