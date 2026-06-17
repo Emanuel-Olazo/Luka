@@ -85,4 +85,26 @@ class FirestoreService {
   Future<void> deleteSavingsGoal(String id) async {
     await _db.collection('savings_goals').doc(id).delete();
   }
+
+  // --- Transfers ---
+  Future<void> transferToSavingsGoal(SavingsGoal goal, double amount) async {
+    if (uid == null) return;
+    
+    // 1. Create a negative transaction
+    final tx = app_models.Transaction(
+      id: '',
+      note: 'Transferencia a ${goal.title}',
+      amount: amount,
+      date: DateTime.now(),
+      category: 'Ahorro',
+      isExpense: true,
+      uid: uid!,
+    );
+    await addTransaction(tx);
+
+    // 2. Update the savings goal
+    await _db.collection('savings_goals').doc(goal.id).update({
+      'savedAmount': FieldValue.increment(amount),
+    });
+  }
 }

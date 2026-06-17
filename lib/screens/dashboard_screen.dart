@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/transaction.dart' as app_models;
+import '../models/savings_goal.dart';
 import '../services/firestore_service.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -86,7 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildActionButton(context, Icons.arrow_downward, 'Ingresar', Colors.green),
-                    _buildActionButton(context, Icons.arrow_upward, 'Retirar', Colors.red),
+                    _buildActionButton(context, Icons.arrow_upward, 'Gasto', Colors.red),
                     _buildActionButton(context, Icons.sync, 'Transferir', Colors.blue),
                   ],
                 ),
@@ -116,14 +117,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showTransactionForm(BuildContext context, {bool isExpenseDefault = true, String categoryDefault = 'Comida'}) {
+  void _showIncomeForm(BuildContext context) {
     final noteController = TextEditingController();
     final amountController = TextEditingController();
-    String selectedCategory = categoryDefault;
-    bool isExpense = isExpenseDefault;
-
-    final categories = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Sueldo', 'Otros'];
-    if (!categories.contains(selectedCategory)) categories.add(selectedCategory);
+    String selectedCategory = 'Sueldo';
+    final categories = ['Sueldo', 'Ventas', 'Regalos', 'Otros'];
 
     showModalBottomSheet(
       context: context,
@@ -135,52 +133,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom,
-                left: 20,
-                right: 20,
-                top: 20,
+                left: 20, right: 20, top: 20,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Nueva Transacción', 
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
+                  const Text('Nuevo Ingreso', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RadioListTile<bool>(
-                          title: const Text('Egreso', style: TextStyle(fontSize: 14)),
-                          value: true,
-                          groupValue: isExpense,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) => setModalState(() => isExpense = val!),
-                        ),
-                      ),
-                      Expanded(
-                        child: RadioListTile<bool>(
-                          title: const Text('Ingreso', style: TextStyle(fontSize: 14)),
-                          value: false,
-                          groupValue: isExpense,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) => setModalState(() => isExpense = val!),
-                        ),
-                      ),
-                    ],
-                  ),
                   TextField(
                     controller: amountController,
                     decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: noteController,
-                    decoration: const InputDecoration(labelText: 'Nota (Opcional)'),
-                  ),
+                  TextField(controller: noteController, decoration: const InputDecoration(labelText: 'Nota (Opcional)')),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
                     value: selectedCategory,
@@ -192,32 +159,169 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Theme.of(context).primaryColor,
+                      backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () async {
                       if (amountController.text.isEmpty) return;
                       final double amount = double.tryParse(amountController.text) ?? 0.0;
                       if (amount <= 0) return;
-                      
                       final tx = app_models.Transaction(
-                        id: '', 
-                        note: noteController.text,
-                        amount: amount,
-                        date: DateTime.now(),
-                        category: selectedCategory,
-                        isExpense: isExpense,
-                        uid: _firestoreService.uid ?? '',
+                        id: '', note: noteController.text, amount: amount, date: DateTime.now(),
+                        category: selectedCategory, isExpense: false, uid: _firestoreService.uid ?? '',
                       );
-
                       await _firestoreService.addTransaction(tx);
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
-                    child: const Text('Guardar'),
+                    child: const Text('Guardar Ingreso'),
                   ),
                   const SizedBox(height: 24),
                 ],
               ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  void _showExpenseForm(BuildContext context) {
+    final noteController = TextEditingController();
+    final amountController = TextEditingController();
+    String selectedCategory = 'Comida';
+    final categories = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Otros'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                left: 20, right: 20, top: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Nuevo Gasto', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red), textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountController,
+                    decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(controller: noteController, decoration: const InputDecoration(labelText: 'Nota (Opcional)')),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) => setModalState(() => selectedCategory = val!),
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () async {
+                      if (amountController.text.isEmpty) return;
+                      final double amount = double.tryParse(amountController.text) ?? 0.0;
+                      if (amount <= 0) return;
+                      final tx = app_models.Transaction(
+                        id: '', note: noteController.text, amount: amount, date: DateTime.now(),
+                        category: selectedCategory, isExpense: true, uid: _firestoreService.uid ?? '',
+                      );
+                      await _firestoreService.addTransaction(tx);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: const Text('Registrar Gasto'),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  void _showTransferForm(BuildContext context) {
+    final amountController = TextEditingController();
+    SavingsGoal? selectedGoal;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return StreamBuilder<List<SavingsGoal>>(
+          stream: _firestoreService.getSavingsGoals(),
+          builder: (context, snapshot) {
+            final goals = snapshot.data ?? [];
+            if (goals.isNotEmpty && selectedGoal == null) selectedGoal = goals.first;
+
+            return StatefulBuilder(
+              builder: (BuildContext context, StateSetter setModalState) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                    left: 20, right: 20, top: 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('Transferir a Alcancía', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue), textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      if (goals.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('No tienes alcancías creadas. Crea una en la pestaña "Ahorros" primero.', textAlign: TextAlign.center),
+                        )
+                      else ...[
+                        DropdownButtonFormField<SavingsGoal>(
+                          value: selectedGoal,
+                          items: goals.map((g) => DropdownMenuItem(value: g, child: Text(g.title))).toList(),
+                          onChanged: (val) => setModalState(() => selectedGoal = val),
+                          decoration: const InputDecoration(labelText: 'Selecciona una Alcancía'),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: amountController,
+                          decoration: const InputDecoration(labelText: 'Monto a Transferir', prefixText: '\$ '),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            if (amountController.text.isEmpty || selectedGoal == null) return;
+                            final double amount = double.tryParse(amountController.text) ?? 0.0;
+                            if (amount <= 0) return;
+                            
+                            await _firestoreService.transferToSavingsGoal(selectedGoal!, amount);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                          child: const Text('Completar Transferencia'),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                );
+              }
             );
           }
         );
@@ -235,11 +339,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(icon, color: color),
             onPressed: () {
               if (label == 'Ingresar') {
-                _showTransactionForm(context, isExpenseDefault: false, categoryDefault: 'Sueldo');
-              } else if (label == 'Retirar') {
-                _showTransactionForm(context, isExpenseDefault: true, categoryDefault: 'Comida');
+                _showIncomeForm(context);
+              } else if (label == 'Gasto') {
+                _showExpenseForm(context);
               } else if (label == 'Transferir') {
-                _showTransactionForm(context, isExpenseDefault: true, categoryDefault: 'Otros');
+                _showTransferForm(context);
               }
             },
           ),
