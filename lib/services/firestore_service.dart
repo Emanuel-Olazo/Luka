@@ -46,4 +46,43 @@ class FirestoreService {
             .map((doc) => SavingsGoal.fromFirestore(doc))
             .toList());
   }
+
+  // --- CRUD Transactions ---
+  Future<void> addTransaction(app_models.Transaction tx) async {
+    await _db.collection('transactions').add(tx.toMap());
+  }
+
+  Future<void> updateTransaction(String id, Map<String, dynamic> data) async {
+    await _db.collection('transactions').doc(id).update(data);
+  }
+
+  Future<void> deleteTransaction(String id) async {
+    await _db.collection('transactions').doc(id).delete();
+  }
+
+  // --- CRUD Budgets ---
+  Future<void> addBudget(Budget budget) async {
+    await _db.collection('budgets').add(budget.toMap());
+  }
+
+  Future<void> updateBudget(String id, Map<String, dynamic> data) async {
+    await _db.collection('budgets').doc(id).update(data);
+  }
+
+  Future<void> deleteBudget(String id) async {
+    await _db.collection('budgets').doc(id).delete();
+  }
+
+  // --- CRUD Savings Goals ---
+  Future<void> addSavingsGoal(SavingsGoal goal) async {
+    await _db.collection('savings_goals').add(goal.toMap());
+  }
+
+  Future<void> updateSavingsGoal(String id, Map<String, dynamic> data) async {
+    await _db.collection('savings_goals').doc(id).update(data);
+  }
+
+  Future<void> deleteSavingsGoal(String id) async {
+    await _db.collection('savings_goals').doc(id).delete();
+  }
 }
