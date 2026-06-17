@@ -15,11 +15,14 @@ class FirestoreService {
     return _db
         .collection('transactions')
         .where('uid', isEqualTo: uid)
-        .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => app_models.Transaction.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final txs = snapshot.docs
+              .map((doc) => app_models.Transaction.fromFirestore(doc))
+              .toList();
+          txs.sort((a, b) => b.date.compareTo(a.date));
+          return txs;
+        });
   }
 
   Stream<List<Budget>> getBudgets() {
