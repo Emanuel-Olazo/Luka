@@ -13,6 +13,93 @@ class BudgetScreen extends StatefulWidget {
 class _BudgetScreenState extends State<BudgetScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
+  String _getMonthName(int month) {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return month >= 1 && month <= 12 ? months[month - 1] : '';
+  }
+
+  void _showBudgetForm(BuildContext context, [Budget? existingBudget]) {
+    final limitController = TextEditingController(text: existingBudget?.limitAmount.toString() ?? '');
+    String selectedCategory = existingBudget?.category ?? 'Comida'; // Default
+    final categories = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Sueldo', 'Otros'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                left: 20,
+                right: 20,
+                top: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    existingBudget == null ? 'Nuevo Presupuesto' : 'Editar Presupuesto', 
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: limitController,
+                    decoration: const InputDecoration(labelText: 'Límite Mensual', prefixText: '\$ '),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) => setModalState(() => selectedCategory = val!),
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () async {
+                      if (limitController.text.isEmpty) return;
+                      final double limit = double.tryParse(limitController.text) ?? 0.0;
+                      if (limit <= 0) return;
+                      
+                      final budget = Budget(
+                        id: existingBudget?.id ?? '', 
+                        category: selectedCategory,
+                        limitAmount: limit,
+                        month: DateTime.now().month,
+                        year: DateTime.now().year,
+                        uid: _firestoreService.uid ?? '',
+                      );
+
+                      if (existingBudget == null) {
+                        await _firestoreService.addBudget(budget);
+                      } else {
+                        await _firestoreService.updateBudget(budget.id, budget.toMap());
+                      }
+                      
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: const Text('Guardar'),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,48 +152,67 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     progressColor = Colors.orange;
                   }
 
-                  return Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  return Dismissible(
+                    key: Key(budget.id),
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (direction) {
+                      _firestoreService.deleteBudget(budget.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Presupuesto eliminado')),
+                      );
+                    },
+                    child: GestureDetector(
+                      onTap: () => _showBudgetForm(context, budget),
+                      child: Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                budget.category,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${budget.category} (${_getMonthName(budget.month)} ${budget.year})',
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    '\$${budget.spentAmount.toStringAsFixed(0)} / \$${budget.limitAmount.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: budget.progress > 1.0 ? Colors.red : Colors.black87,
+                                    ),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 12),
+                              LinearProgressIndicator(
+                                value: budget.progress > 1.0 ? 1.0 : budget.progress,
+                                backgroundColor: Colors.grey.shade200,
+                                color: progressColor,
+                                minHeight: 10,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              const SizedBox(height: 8),
                               Text(
-                                '\$${budget.spentAmount.toStringAsFixed(0)} / \$${budget.limitAmount.toStringAsFixed(0)}',
+                                'Quedan: \$${budget.remaining.toStringAsFixed(2)}',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: budget.progress > 1.0 ? Colors.red : Colors.black87,
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          LinearProgressIndicator(
-                            value: budget.progress > 1.0 ? 1.0 : budget.progress,
-                            backgroundColor: Colors.grey.shade200,
-                            color: progressColor,
-                            minHeight: 10,
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Quedan: \$${budget.remaining.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   );
@@ -117,11 +223,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Configurar nuevo presupuesto (Próximamente)')),
-          );
-        },
+        onPressed: () => _showBudgetForm(context),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add_chart),
