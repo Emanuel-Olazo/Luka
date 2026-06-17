@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/budget.dart';
 import '../models/transaction.dart' as app_models;
+import '../models/category.dart';
 import '../services/firestore_service.dart';
 
 class BudgetScreen extends StatefulWidget {
@@ -20,80 +21,96 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   void _showBudgetForm(BuildContext context, [Budget? existingBudget]) {
     final limitController = TextEditingController(text: existingBudget?.limitAmount.toString() ?? '');
-    String selectedCategory = existingBudget?.category ?? 'Comida'; // Default
-    final categories = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Sueldo', 'Otros'];
-    if (!categories.contains(selectedCategory)) categories.add(selectedCategory);
+    String? selectedCategory = existingBudget?.category;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
-                left: 20,
-                right: 20,
-                top: 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    existingBudget == null ? 'Nuevo Presupuesto' : 'Editar Presupuesto', 
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: limitController,
-                    decoration: const InputDecoration(labelText: 'Límite Mensual', prefixText: '\$ '),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (val) => setModalState(() => selectedCategory = val!),
-                    decoration: const InputDecoration(labelText: 'Categoría'),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () async {
-                      if (limitController.text.isEmpty) return;
-                      final double limit = double.tryParse(limitController.text) ?? 0.0;
-                      if (limit <= 0) return;
-                      
-                      final budget = Budget(
-                        id: existingBudget?.id ?? '', 
-                        category: selectedCategory,
-                        limitAmount: limit,
-                        month: DateTime.now().month,
-                        year: DateTime.now().year,
-                        uid: _firestoreService.uid ?? '',
-                      );
+        return StreamBuilder<List<Category>>(
+          stream: _firestoreService.getCategories(),
+          builder: (context, snapshot) {
+            final categories = snapshot.data?.map((c) => c.name).toList() ?? [];
+            if (categories.isNotEmpty && selectedCategory == null) {
+              selectedCategory = categories.first;
+            } else if (categories.isNotEmpty && !categories.contains(selectedCategory)) {
+              categories.add(selectedCategory!);
+            }
 
-                      if (existingBudget == null) {
-                        await _firestoreService.addBudget(budget);
-                      } else {
-                        await _firestoreService.updateBudget(budget.id, budget.toMap());
-                      }
-                      
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    },
-                    child: const Text('Guardar'),
+            return StatefulBuilder(
+              builder: (BuildContext context, StateSetter setModalState) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                    left: 20,
+                    right: 20,
+                    top: 20,
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        existingBudget == null ? 'Nuevo Presupuesto' : 'Editar Presupuesto', 
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: limitController,
+                        decoration: const InputDecoration(labelText: 'Límite Mensual', prefixText: '\$ '),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                      const SizedBox(height: 10),
+                      if (categories.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text('Cargando categorías...', style: TextStyle(color: Colors.grey)),
+                        )
+                      else
+                        DropdownButtonFormField<String>(
+                          value: selectedCategory,
+                          items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                          onChanged: (val) => setModalState(() => selectedCategory = val),
+                          decoration: const InputDecoration(labelText: 'Categoría'),
+                        ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () async {
+                          if (limitController.text.isEmpty || selectedCategory == null) return;
+                          final double limit = double.tryParse(limitController.text) ?? 0.0;
+                          if (limit <= 0) return;
+                          
+                          final budget = Budget(
+                            id: existingBudget?.id ?? '', 
+                            category: selectedCategory!,
+                            limitAmount: limit,
+                            month: DateTime.now().month,
+                            year: DateTime.now().year,
+                            uid: _firestoreService.uid ?? '',
+                          );
+
+                          if (existingBudget == null) {
+                            await _firestoreService.addBudget(budget);
+                          } else {
+                            await _firestoreService.updateBudget(budget.id, budget.toMap());
+                          }
+                          
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        child: const Text('Guardar'),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                );
+              }
             );
           }
         );

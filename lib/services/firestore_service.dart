@@ -47,6 +47,36 @@ class FirestoreService {
             .toList());
   }
 
+  Stream<List<Category>> getCategories() {
+    if (uid == null) return Stream.value([]);
+    return _db
+        .collection('categories')
+        .where('uid', isEqualTo: uid)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Category.fromFirestore(doc))
+            .toList());
+  }
+
+  Future<void> ensureDefaultCategories() async {
+    if (uid == null) return;
+    final snapshot = await _db.collection('categories').where('uid', isEqualTo: uid).limit(1).get();
+    if (snapshot.docs.isEmpty) {
+      final defaults = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Sueldo', 'Otros', 'Salud', 'Educación'];
+      final batch = _db.batch();
+      for (var catName in defaults) {
+        final docRef = _db.collection('categories').doc();
+        batch.set(docRef, {
+          'name': catName,
+          'icon': 'category',
+          'color': '#000000',
+          'uid': uid,
+        });
+      }
+      await batch.commit();
+    }
+  }
+
   // --- CRUD Transactions ---
   Future<void> addTransaction(app_models.Transaction tx) async {
     await _db.collection('transactions').add(tx.toMap());
@@ -106,5 +136,14 @@ class FirestoreService {
     await _db.collection('savings_goals').doc(goal.id).update({
       'savedAmount': FieldValue.increment(amount),
     });
+  }
+
+  // --- CRUD Categories ---
+  Future<void> addCategory(Category category) async {
+    await _db.collection('categories').add(category.toMap());
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _db.collection('categories').doc(id).delete();
   }
 }

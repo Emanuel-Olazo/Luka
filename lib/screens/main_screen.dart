@@ -5,6 +5,8 @@ import 'dashboard_screen.dart';
 import 'transactions_screen.dart';
 import 'budget_screen.dart';
 import 'savings_screen.dart';
+import 'categories_screen.dart';
+import '../services/firestore_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -23,6 +25,14 @@ class _MainScreenState extends State<MainScreen> {
     SavingsScreen(),
   ];
 
+  final FirestoreService _firestoreService = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    _firestoreService.ensureDefaultCategories();
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -37,6 +47,12 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const CategoriesScreen()));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {

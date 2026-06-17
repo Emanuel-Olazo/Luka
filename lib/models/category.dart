@@ -25,4 +25,13 @@ class Category {
       uid: data['uid'] ?? '',
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'icon': icon,
+      'color': color,
+      'uid': uid,
+    };
+  }
 }

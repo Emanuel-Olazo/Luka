@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/transaction.dart' as app_models;
+import '../models/category.dart';
 import '../services/firestore_service.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -15,109 +16,125 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   void _showTransactionForm(BuildContext context, [app_models.Transaction? existingTx]) {
     final noteController = TextEditingController(text: existingTx?.note ?? '');
     final amountController = TextEditingController(text: existingTx?.amount.toString() ?? '');
-    String selectedCategory = existingTx?.category ?? 'Comida'; // Default
+    String? selectedCategory = existingTx?.category;
     bool isExpense = existingTx?.isExpense ?? true;
-
-    final categories = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Sueldo', 'Otros'];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
-                left: 20,
-                right: 20,
-                top: 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    existingTx == null ? 'Nueva Transacción' : 'Editar Transacción', 
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+        return StreamBuilder<List<Category>>(
+          stream: _firestoreService.getCategories(),
+          builder: (context, snapshot) {
+            final categories = snapshot.data?.map((c) => c.name).toList() ?? [];
+            if (categories.isNotEmpty && selectedCategory == null) {
+              selectedCategory = categories.first;
+            } else if (categories.isNotEmpty && !categories.contains(selectedCategory)) {
+              categories.add(selectedCategory!);
+            }
+
+            return StatefulBuilder(
+              builder: (BuildContext context, StateSetter setModalState) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                    left: 20,
+                    right: 20,
+                    top: 20,
                   ),
-                  const SizedBox(height: 16),
-                  Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: RadioListTile<bool>(
-                          title: const Text('Egreso', style: TextStyle(fontSize: 14)),
-                          value: true,
-                          groupValue: isExpense,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) => setModalState(() => isExpense = val!),
-                        ),
+                      Text(
+                        existingTx == null ? 'Nueva Transacción' : 'Editar Transacción', 
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
                       ),
-                      Expanded(
-                        child: RadioListTile<bool>(
-                          title: const Text('Ingreso', style: TextStyle(fontSize: 14)),
-                          value: false,
-                          groupValue: isExpense,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) => setModalState(() => isExpense = val!),
-                        ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<bool>(
+                              title: const Text('Egreso', style: TextStyle(fontSize: 14)),
+                              value: true,
+                              groupValue: isExpense,
+                              contentPadding: EdgeInsets.zero,
+                              onChanged: (val) => setModalState(() => isExpense = val!),
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<bool>(
+                              title: const Text('Ingreso', style: TextStyle(fontSize: 14)),
+                              value: false,
+                              groupValue: isExpense,
+                              contentPadding: EdgeInsets.zero,
+                              onChanged: (val) => setModalState(() => isExpense = val!),
+                            ),
+                          ),
+                        ],
                       ),
+                      TextField(
+                        controller: amountController,
+                        decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: noteController,
+                        decoration: const InputDecoration(labelText: 'Nota (Ej. Supermercado)'),
+                      ),
+                      const SizedBox(height: 10),
+                      if (categories.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text('Cargando categorías...', style: TextStyle(color: Colors.grey)),
+                        )
+                      else
+                        DropdownButtonFormField<String>(
+                          value: selectedCategory,
+                          items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                          onChanged: (val) => setModalState(() => selectedCategory = val),
+                          decoration: const InputDecoration(labelText: 'Categoría'),
+                        ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () async {
+                          if (amountController.text.isEmpty || selectedCategory == null) return;
+                          final double amount = double.tryParse(amountController.text) ?? 0.0;
+                          if (amount <= 0) return;
+                          
+                          final tx = app_models.Transaction(
+                            id: existingTx?.id ?? '', 
+                            note: noteController.text,
+                            amount: amount,
+                            date: existingTx?.date ?? DateTime.now(),
+                            category: selectedCategory!,
+                            isExpense: isExpense,
+                            uid: _firestoreService.uid ?? '',
+                          );
+
+                          if (existingTx == null) {
+                            await _firestoreService.addTransaction(tx);
+                          } else {
+                            await _firestoreService.updateTransaction(tx.id, tx.toMap());
+                          }
+                          
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        child: const Text('Guardar'),
+                      ),
+                      const SizedBox(height: 24),
                     ],
                   ),
-                  TextField(
-                    controller: amountController,
-                    decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: noteController,
-                    decoration: const InputDecoration(labelText: 'Nota (Ej. Supermercado)'),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (val) => setModalState(() => selectedCategory = val!),
-                    decoration: const InputDecoration(labelText: 'Categoría'),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () async {
-                      if (amountController.text.isEmpty) return;
-                      final double amount = double.tryParse(amountController.text) ?? 0.0;
-                      if (amount <= 0) return;
-                      
-                      final tx = app_models.Transaction(
-                        id: existingTx?.id ?? '', 
-                        note: noteController.text,
-                        amount: amount,
-                        date: existingTx?.date ?? DateTime.now(),
-                        category: selectedCategory,
-                        isExpense: isExpense,
-                        uid: _firestoreService.uid ?? '',
-                      );
-
-                      if (existingTx == null) {
-                        await _firestoreService.addTransaction(tx);
-                      } else {
-                        await _firestoreService.updateTransaction(tx.id, tx.toMap());
-                      }
-                      
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    },
-                    child: const Text('Guardar'),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                );
+              }
             );
           }
         );
