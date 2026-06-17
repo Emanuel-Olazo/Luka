@@ -22,6 +22,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final limitController = TextEditingController(text: existingBudget?.limitAmount.toString() ?? '');
     String selectedCategory = existingBudget?.category ?? 'Comida'; // Default
     final categories = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Sueldo', 'Otros'];
+    if (!categories.contains(selectedCategory)) categories.add(selectedCategory);
 
     showModalBottomSheet(
       context: context,
