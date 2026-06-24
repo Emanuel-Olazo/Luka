@@ -39,7 +39,7 @@ class SavingsGoal {
       deadline: data['deadline'] != null ? (data['deadline'] as Timestamp).toDate() : null,
       createdBy: data['createdBy'] ?? '',
       inviteCode: data['inviteCode'] ?? '',
-      isShared: m.length > 1,
+      isShared: data['isShared'] ?? (m.length > 1),
       members: m,
     );
   }
@@ -53,6 +53,7 @@ class SavingsGoal {
       'createdBy': createdBy,
       'inviteCode': inviteCode,
       'members': members,
+      'isShared': isShared,
     };
   }
 }

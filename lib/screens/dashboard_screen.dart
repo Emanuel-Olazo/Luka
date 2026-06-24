@@ -5,7 +5,9 @@ import '../models/category.dart';
 import '../services/firestore_service.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final VoidCallback? onSeeAllTransactions;
+
+  const DashboardScreen({super.key, this.onSeeAllTransactions});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -30,14 +32,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           double totalBalance = 0;
           double totalIngresos = 0;
           double totalGastos = 0;
+          double totalAhorros = 0;
           
+          final now = DateTime.now();
+
           for (var tx in transactions) {
+            // Balance is historical (all time)
             if (tx.isExpense) {
               totalBalance -= tx.amount;
-              totalGastos += tx.amount;
             } else {
               totalBalance += tx.amount;
-              totalIngresos += tx.amount;
+            }
+
+            // Resumen mensual (mes actual)
+            if (tx.date.year == now.year && tx.date.month == now.month) {
+              if (tx.category == 'Ahorro') {
+                totalAhorros += tx.amount;
+              } else if (tx.isExpense) {
+                totalGastos += tx.amount;
+              } else {
+                totalIngresos += tx.amount;
+              }
             }
           }
 
@@ -149,7 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Expanded(child: _buildSummaryCard('GASTOS', 'S/. ${totalGastos.toStringAsFixed(2)}', Colors.red, Icons.arrow_downward)),
                           const SizedBox(width: 12),
-                          Expanded(child: _buildSummaryCard('PAGOS', 'S/. 0.00', Colors.blue, Icons.receipt_long)),
+                          Expanded(child: _buildSummaryCard('AHORROS', 'S/. ${totalAhorros.toStringAsFixed(2)}', Colors.blue, Icons.savings)),
                           const SizedBox(width: 12),
                           Expanded(child: _buildSummaryCard('INGRESOS', 'S/. ${totalIngresos.toStringAsFixed(2)}', Colors.green, Icons.arrow_upward)),
                         ],
@@ -162,9 +177,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'Movimientos Recientes',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                          Text(
-                            'Ver todos >',
-                            style: TextStyle(fontSize: 14, color: Colors.blue.shade700, fontWeight: FontWeight.w600),
+                          GestureDetector(
+                            onTap: widget.onSeeAllTransactions,
+                            child: Text(
+                              'Ver todos >',
+                              style: TextStyle(fontSize: 14, color: Colors.blue.shade700, fontWeight: FontWeight.w600),
+                            ),
                           ),
                         ],
                       ),
@@ -464,8 +482,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             final double amount = double.tryParse(amountController.text) ?? 0.0;
                             if (amount <= 0) return;
                             
-                            await _firestoreService.transferToSavingsGoal(selectedGoal!, amount);
-                            if (ctx.mounted) Navigator.pop(ctx);
+                            try {
+                              await _firestoreService.transferToSavingsGoal(selectedGoal!, amount);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
                           },
                           child: const Text('Completar Transferencia'),
                         ),

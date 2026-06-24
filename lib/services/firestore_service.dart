@@ -116,25 +116,108 @@ class FirestoreService {
     await _db.collection('savings_goals').doc(id).delete();
   }
 
-  // --- Transfers ---
   Future<void> transferToSavingsGoal(SavingsGoal goal, double amount) async {
     if (uid == null) return;
     
-    // 1. Create a negative transaction
-    final tx = app_models.Transaction(
-      id: '',
-      note: 'Transferencia a ${goal.title}',
-      amount: amount,
-      date: DateTime.now(),
-      category: 'Ahorro',
-      isExpense: true,
-      uid: uid!,
-    );
-    await addTransaction(tx);
+    // Validate available balance before transaction
+    final txSnapshot = await _db.collection('transactions').where('uid', isEqualTo: uid).get();
+    double balance = 0;
+    for (var doc in txSnapshot.docs) {
+      final data = doc.data();
+      final txAmount = (data['amount'] ?? 0).toDouble();
+      if (data['isExpense'] == true) {
+        balance -= txAmount;
+      } else {
+        balance += txAmount;
+      }
+    }
+    
+    if (balance < amount) {
+      throw 'Saldo insuficiente para realizar este aporte.';
+    }
 
-    // 2. Update the savings goal
-    await _db.collection('savings_goals').doc(goal.id).update({
-      'savedAmount': FieldValue.increment(amount),
+    final goalRef = _db.collection('savings_goals').doc(goal.id);
+    final txRef = _db.collection('transactions').doc();
+    final contribRef = goalRef.collection('contributions').doc();
+
+    await _db.runTransaction((transaction) async {
+      // Leer el documento actual dentro de la transacción
+      final goalSnapshot = await transaction.get(goalRef);
+      if (!goalSnapshot.exists) throw 'La alcancía ya no existe.';
+      
+      final goalData = goalSnapshot.data()!;
+      final currentSaved = (goalData['savedAmount'] ?? 0).toDouble();
+      final target = (goalData['targetAmount'] ?? 0).toDouble();
+      
+      if (currentSaved + amount > target) {
+        final remaining = target - currentSaved;
+        if (remaining <= 0) {
+          throw 'La meta ya ha sido alcanzada.';
+        } else {
+          throw 'El aporte supera la meta. Puedes aportar máximo S/. ${remaining.toStringAsFixed(2)}';
+        }
+      }
+
+      final tx = app_models.Transaction(
+        id: txRef.id,
+        note: 'Transferencia a ${goal.title}',
+        amount: amount,
+        date: DateTime.now(),
+        category: 'Ahorro',
+        isExpense: true,
+        uid: uid!,
+      );
+      
+      transaction.set(txRef, tx.toMap());
+      
+      transaction.set(contribRef, {
+        'uid': uid,
+        'amount': amount,
+        'date': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(goalRef, {
+        'savedAmount': currentSaved + amount,
+      });
+    });
+  }
+
+  Future<void> joinSavingsGoal(String inviteCode) async {
+    if (uid == null) return;
+    
+    final querySnapshot = await _db
+        .collection('savings_goals')
+        .where('inviteCode', isEqualTo: inviteCode)
+        .limit(1)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      throw 'Código de invitación no encontrado.';
+    }
+
+    final docRef = querySnapshot.docs.first.reference;
+
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) throw 'La alcancía ya no existe.';
+      
+      final data = snapshot.data()!;
+      List<String> members = List<String>.from(data['members'] ?? []);
+      
+      if (members.contains(uid)) {
+        throw 'Ya eres miembro de esta alcancía.';
+      }
+      
+      if (members.length >= 4) {
+        throw 'Esta alcancía ya ha alcanzado el límite de 4 miembros.';
+      }
+      
+      members.add(uid!);
+      
+      transaction.update(docRef, {
+        'members': members,
+        'isShared': true,
+      });
     });
   }
 

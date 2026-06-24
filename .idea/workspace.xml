@@ -98,12 +98,12 @@
   <component name="ChangeListManager">
     <list default="true" id="9a047228-9bd9-4abc-a7a7-0ea54c6f3cc5" name="Changes" comment="Alcancia agregada">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/savings_goal.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/savings_goal.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/budget_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/budget_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/dashboard_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/dashboard_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/main_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/main_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/transactions_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/transactions_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/savings_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/savings_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/firestore_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/firestore_service.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -332,8 +332,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   Widget _buildDistributionTab(List<app_models.Transaction> transactions) {
     Map<String, double> expensesByCategory = {};
+    final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+    
     for (var tx in transactions) {
-      if (tx.isExpense) {
+      if (tx.isExpense && tx.date.isAfter(sixMonthsAgo)) {
         expensesByCategory[tx.category] = (expensesByCategory[tx.category] ?? 0) + tx.amount;
       }
     }

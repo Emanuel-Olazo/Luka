@@ -6,6 +6,7 @@ import 'transactions_screen.dart';
 import 'budget_screen.dart';
 import 'savings_screen.dart';
 import 'categories_screen.dart';
+import 'auth/profile_screen.dart';
 import '../services/firestore_service.dart';
 import '../models/transaction.dart' as app_models;
 import '../models/category.dart';
@@ -21,18 +22,19 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _widgetOptions = <Widget>[
-    DashboardScreen(),
-    TransactionsScreen(),
-    BudgetScreen(),
-    SavingsScreen(),
-  ];
+  late final List<Widget> _widgetOptions;
 
   final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
+    _widgetOptions = <Widget>[
+      DashboardScreen(onSeeAllTransactions: () => _onItemTapped(1)),
+      const TransactionsScreen(),
+      const BudgetScreen(),
+      const SavingsScreen(),
+    ];
     _firestoreService.ensureDefaultCategories();
   }
 
@@ -255,21 +257,9 @@ class _MainScreenState extends State<MainScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.person),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const CategoriesScreen()));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (Route<dynamic> route) => false,
-                );
-              }
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
             },
           ),
         ],
@@ -295,7 +285,7 @@ class _MainScreenState extends State<MainScreen> {
             _buildTabItem(icon: Icons.format_list_bulleted, label: 'Historial', index: 1),
             const SizedBox(width: 48), // Space for FAB
             _buildTabItem(icon: Icons.grid_view, label: 'Analítica', index: 2),
-            _buildTabItem(icon: Icons.settings_outlined, label: 'Ajustes', index: 3),
+            _buildTabItem(icon: Icons.savings_outlined, label: 'Alcancías', index: 3),
           ],
         ),
       ),
